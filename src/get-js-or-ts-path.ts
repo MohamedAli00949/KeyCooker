@@ -60,16 +60,27 @@ export function getKeyPathAtJSOrTS(
 
 	for (let i = startLine; i >= 0; i--) {
 		const line = lines[i];
-		const trimmedLine = line.trim();
 
-		if (!trimmedLine || isJSComment(line)) {
+		if (!line.trim() || isJSComment(line)) {
 			continue;
 		}
 
-		const targetLineSlice =
-			startLine === i
-				? line.slice(0, selection.start.character).split(";").at(-1) ?? ""
-				: line.split(";").at(-1) ?? "";
+		const rawLine =
+			startLine === i ? line.slice(0, selection.start.character) : line;
+
+		const targetLineSlice = (() => {
+			const cleaned = rawLine
+				.replace(/\r/g, "")
+				.replace(/\/\*.*?\*\//g, "")
+				.replace(/\/\/.*$/g, "");
+
+			const segments = cleaned
+				.split(";")
+				.map((s) => s.trim())
+				.filter(Boolean);
+
+			return segments.length > 0 ? segments[segments.length - 1] : cleaned;
+		})();
 
 		if (targetLineSlice.includes("=") && equalSperatorLine === -1) {
 			equalSperatorLine = i;
@@ -84,10 +95,10 @@ export function getKeyPathAtJSOrTS(
 		}
 
 		if (i === startLine) {
-			const cleanLine = trimmedLine.slice(0, selection.start.character);
+			const cleanLine = targetLineSlice.slice(0, selection.start.character);
 
 			const arrayMatches = [...cleanLine.matchAll(/(\w+)\s*:\s*\[/g)];
-			arrayMatches.forEach((arrayMatch) => {
+			arrayMatches.reverse().forEach((arrayMatch) => {
 				const tupleIndex = findTupleIndex(lines, i, startLine);
 				path.unshift(`${arrayMatch[1]}[${tupleIndex}]`);
 			});
@@ -99,16 +110,19 @@ export function getKeyPathAtJSOrTS(
 		} else {
 			const lineLevel = getIndentationLevel(line);
 			if (lineLevel < lastLineLevel) {
-				const arrayMatches = [...trimmedLine.matchAll(/(\w+)\s*:\s*\[/g)];
-				arrayMatches.forEach((arrayMatch) => {
+				const arrayMatches = [...targetLineSlice.matchAll(/(\w+)\s*:\s*\[/g)];
+				arrayMatches.reverse().forEach((arrayMatch) => {
 					const tupleIndex = findTupleIndex(lines, i, startLine);
 					path.unshift(`${arrayMatch[1]}[${tupleIndex}]`);
 				});
 
-				const propertyMatches = [...trimmedLine.matchAll(/(\w+)\s*:\s*\{/gi)];
+				const propertyMatches = [
+					...targetLineSlice.matchAll(/(\w+)\s*:\s*\{/gi),
+				];
 				propertyMatches.reverse().forEach((propertyMatch) => {
 					path.unshift(propertyMatch[1]);
 				});
+
 				lastLineLevel = lineLevel;
 			}
 		}
