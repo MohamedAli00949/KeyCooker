@@ -1,16 +1,60 @@
 import { findTupleIndex, getIndentationLevel, isJSComment } from "./utils";
 import * as vscode from "vscode";
 
+type BlockType = "object" | "class" | "type" | null;
+
+function getBlockData(
+	trimmedLine: string,
+	equalSperatorLine: number,
+): {
+	typeName: string;
+	blockType: BlockType;
+} | null {
+	const typeMatch = trimmedLine.match(/(?:export\s+)?type\s+(\w+)\s*=/);
+
+	if (typeMatch) {
+		return {
+			typeName: typeMatch[1],
+			blockType: "type",
+		};
+	}
+
+	const interfaceMatch = trimmedLine.match(/(?:export\s+)?interface\s+(\w+)/);
+	if (interfaceMatch) {
+		return { typeName: interfaceMatch[1], blockType: "type" };
+	}
+
+	const constMatch = trimmedLine.match(
+		/(?:export\s+)?(?:const|let|var)\s+(\w+)(?:\s*:)?/,
+	);
+	if (constMatch) {
+		if (/:\s*[{[]/.test(trimmedLine) && equalSperatorLine === -1) {
+			return { typeName: "", blockType: "type" };
+		} else {
+			return { typeName: constMatch[1], blockType: "object" };
+		}
+	}
+
+	const classMatch = trimmedLine.match(/(?:export\s+)?class\s+(\w+)/);
+	if (classMatch) {
+		return { typeName: classMatch[1], blockType: "class" };
+	}
+
+	// return { typeName, blockType };
+	return null;
+}
+
 export function getKeyPathAtJSOrTS(
 	documentText: string,
 	selectedText: string,
 	selection: vscode.Selection,
 	startLine: number,
-): string {
+): { path: string; error: string } {
 	const lines = documentText.split("\n");
 	let lastLineLevel = getIndentationLevel(lines[startLine]);
+	let equalSperatorLine = -1;
 
-	let blockType: "object" | "class" | "type" | null = null;
+	let blockType: BlockType = null;
 	let typeName = "";
 	const path: string[] = [selectedText];
 
@@ -22,69 +66,20 @@ export function getKeyPathAtJSOrTS(
 			continue;
 		}
 
-		const typeMatch = trimmedLine.match(/^(?:export\s+)?type\s+(\w+)\s*=/);
-		if (typeMatch) {
-			typeName = typeMatch[1];
-			blockType = "type";
-			break;
+		const targetLineSlice =
+			startLine === i
+				? line.slice(0, selection.start.character).split(";").at(-1) ?? ""
+				: line.split(";").at(-1) ?? "";
+
+		if (targetLineSlice.includes("=") && equalSperatorLine === -1) {
+			equalSperatorLine = i;
 		}
 
-		const interfaceMatch = trimmedLine.match(
-			/^(?:export\s+)?interface\s+(\w+)/,
-		);
-		if (interfaceMatch) {
-			typeName = interfaceMatch[1];
-			blockType = "type";
-			break;
-		}
+		const blockData = getBlockData(targetLineSlice.trim(), equalSperatorLine);
 
-		// todo: validate the path of the key is not at the inline type
-		// ex:
-		/**
-     * // 9.
-        const testVarForType2: {
-          profiles: {
-            users: {
-              names: [
-                string,
-                {
-                  kjkljdfs: "kjdfsfldj";
-                },
-              ];
-            };
-          };
-        } = {
-          profiles: {
-            users: {
-              names: [
-                "string",
-                {
-                  kjkljdfs: "kjdfsfldj",
-                },
-              ],
-            },
-          },
-        };
-     */
-		const constMatch = trimmedLine.match(
-			/^(?:export\s+)?(?:const|let|var)\s+(\w+)\s*:/,
-		);
-		console.log(`const : `, constMatch);
-		if (constMatch) {
-			if (/:\s*[{[]/.test(trimmedLine)) {
-				typeName = "";
-				blockType = "type";
-			} else {
-				typeName = constMatch[1];
-				blockType = "object";
-			}
-			break;
-		}
-
-		const classMatch = trimmedLine.match(/^(?:export\s+)?class\s+(\w+)/);
-		if (classMatch) {
-			typeName = classMatch[1];
-			blockType = "class";
+		if (blockData) {
+			blockType = blockData.blockType;
+			typeName = blockData.typeName;
 			break;
 		}
 
@@ -120,15 +115,15 @@ export function getKeyPathAtJSOrTS(
 	}
 
 	if (blockType === "type" && !typeName) {
-		vscode.window.showErrorMessage("Sorry, invalid key at inline type");
-		return "";
+		return { path: "", error: "Sorry, invalid key at inline type" };
 	}
 
-	return blockType === "object" || blockType === "class"
-		? typeName + "." + path.join(".")
-		: typeName +
-				"" +
-				path
+	const result =
+		blockType === "object" || blockType === "class"
+			? typeName + "." + path.join(".")
+			: typeName +
+			  "" +
+			  path
 					.map((p) =>
 						!isNaN(Number(p))
 							? `[${p}]`
@@ -140,4 +135,6 @@ export function getKeyPathAtJSOrTS(
 							: `["${p}"]`,
 					)
 					.join("");
+
+	return { path: result ?? "", error: "" };
 }
