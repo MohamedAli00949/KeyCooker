@@ -3,23 +3,46 @@
   "displayName": "key cooker",
   "description": "",
   "version": "0.0.1",
+  "publisher": "MohamedAli00949",
+  "enabledApiProposals": [
+    "contribEditorContentMenu"
+  ],
   "engines": {
-    "vscode": "^1.75.0"
+    "vscode": "^1.101.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:json",
+    "onLanguage:yaml",
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "key-cooker.helloWorld",
-        "title": "Hello World"
-      },
+        "command": "key-cooker.copyKeyPath",
+        "title": "Copy key path"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "key-cooker.copyKeyPath",
+          "group": "9_cutcopypaste",
+          "when": "completedKey"
+        }
+      ]
+    },
+    "keybindings": [
       {
-        "command": "key-cooker.currentTime",
-        "title": "Current Time"
+        "command": "key-cooker.copyKeyPath",
+        "key": "ctrl+shift+c",
+        "when": "completedKey"
       }
     ]
   },
@@ -44,5 +67,8 @@
     "@vscode/test-electron": "^2.5.2",
     "eslint": "^9.32.0",
     "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "jsonc-parser": "^3.3.1"
   }
 }
