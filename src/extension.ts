@@ -79,25 +79,39 @@ function isCompletedPropName(): boolean {
 		const selectionLineText = editor.document.lineAt(selection.active.line);
 		const [prevChars, nextChars] = selectionLineText.text.split(selectionText);
 
-		const validBefore =
-			!prevChars.slice(-1).trim() ||
-			prevChars.slice(-1).trim() === "{" ||
-			prevChars.trim().endsWith(`'`) ||
-			prevChars.trim().endsWith(`"`);
+		// const validBefore =
+		// 	!prevChars.slice(-1).trim() ||
+		// 	prevChars.slice(-1).trim() === "{" ||
+		// 	prevChars.trim().endsWith(`'`) ||
+		// 	prevChars.trim().endsWith(`"`);
+
+		// const validAfter =
+		// 	(docLang.startsWith("typescript") &&
+		// 		(nextChars.trim().startsWith("?:") ||
+		// 			nextChars.trim().startsWith(`"?:`) ||
+		// 			nextChars.trim().startsWith(`'?:`))) ||
+		// 	nextChars.trim().startsWith(":") ||
+		// 	nextChars.trim().startsWith(`":`) ||
+		// 	nextChars.trim().startsWith(`':`);
+
+		// const validName =
+		// 	selectionText.startsWith("'") ||
+		// 	selectionText.startsWith('"') ||
+		// 	!/^\d/.test(selectionText);
+
+		// const validBefore = /(?:(?<=\s)|(?<={)|(?<=')|(?<="))/.test(prevChars);
+		// const validName = /^(?:['"].*|[^\d]\w*)/.test(selectionText);
+		// const validAfter = docLang.startsWith("typescript")
+		// 	? /(?=\s*(?:\?|['"]\??)\s*:)/.test(nextChars)
+		// 	: /(?=\\s*['"]?:)/.test(nextChars);
+
+		const validBefore = /^\s*$|{\s*$|['"]$/.test(prevChars);
 
 		const validAfter =
-			(docLang.startsWith("typescript") &&
-				(nextChars.trim().startsWith("?:") ||
-					nextChars.trim().startsWith(`"?:`) ||
-					nextChars.trim().startsWith(`'?:`))) ||
-			nextChars.trim().startsWith(":") ||
-			nextChars.trim().startsWith(`":`) ||
-			nextChars.trim().startsWith(`':`);
+			(docLang.startsWith("typescript") && /^\s*['"]?\?:/.test(nextChars)) ||
+			/^\s*['"]?:/.test(nextChars);
 
-		const validName =
-			selectionText.startsWith("'") ||
-			selectionText.startsWith('"') ||
-			!/^\d/.test(selectionText);
+		const validName = /^['"]|^(?!\d)/.test(selectionText);
 
 		return validBefore && validAfter && validName;
 	}
@@ -114,12 +128,30 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const disposable = vscode.commands.registerCommand(
 		"key-cooker.copyKeyPath",
-		() => {
+		async () => {
+			const editor = vscode.window.activeTextEditor;
+			if (!editor) {
+				return;
+			}
+			const selection = editor.selection;
+			if (!selection) {
+				return;
+			}
+
 			if (isCompletedPropName()) {
 				const path = getSelectedKeyPath();
 				if (path.path && !path.error) {
-					vscode.env.clipboard.writeText(path.path);
-					vscode.window.showInformationMessage("The final path: " + path.path);
+					try {
+						await vscode.env.clipboard.writeText(path.path);
+						vscode.window.showInformationMessage(
+							`The final path to '${editor.document.getText(selection)}': ` +
+								path.path,
+						);
+					} catch (error) {
+						vscode.window.showErrorMessage(
+							"Failed to copy content: " + (error as Error).message,
+						);
+					}
 				}
 
 				if (path.error) {
