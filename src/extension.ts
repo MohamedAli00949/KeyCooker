@@ -5,7 +5,7 @@ import { getLocation as getLocationJSON } from "jsonc-parser";
 import { getKeyPathAtJSOrTS } from "./get-js-or-ts-path";
 import { getKeyPathAtYAML } from "./get-yaml-path";
 
-function getSelectedText(): { path: string; error: string } {
+function getSelectedKeyPath(): { path: string; error: string } {
 	const editor = vscode.window.activeTextEditor;
 
 	if (editor) {
@@ -42,13 +42,17 @@ function getSelectedText(): { path: string; error: string } {
 			document.languageId === "yml"
 		) {
 			return {
-				path: getKeyPathAtYAML(document, selection, selectedText.trim()),
+				path: getKeyPathAtYAML(
+					document,
+					selection,
+					selectedText.trim().replace(/['"]/g, ""),
+				),
 				error: "",
 			};
 		} else {
 			const result = getKeyPathAtJSOrTS(
 				document.getText(),
-				selectedText.trim(),
+				selectedText.trim().replace(/['"]/g, ""),
 				selection,
 				selection.start.line,
 			);
@@ -112,7 +116,7 @@ export function activate(context: vscode.ExtensionContext) {
 		"key-cooker.copyKeyPath",
 		() => {
 			if (isCompletedPropName()) {
-				const path = getSelectedText();
+				const path = getSelectedKeyPath();
 				if (path.path && !path.error) {
 					vscode.env.clipboard.writeText(path.path);
 					vscode.window.showInformationMessage("The final path: " + path.path);

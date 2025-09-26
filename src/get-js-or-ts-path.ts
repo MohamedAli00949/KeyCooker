@@ -44,6 +44,7 @@ function getBlockData(
 	return null;
 }
 
+// todo: fix if any prop key at the path start with number to add it at ["{key-name}"]
 export function getKeyPathAtJSOrTS(
 	documentText: string,
 	selectedText: string,

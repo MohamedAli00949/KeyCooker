@@ -1,5 +1,7 @@
 import * as vscode from "vscode";
 
+// todo: fix if any prop key at the path start with number to add it at ["{key-name}"]
+// todo: fix if prop at inline object such as (ex, `    engines: {node: '>= 0.4'}` at package-lock.json file)
 export function getKeyPathAtYAML(
 	document: vscode.TextDocument,
 	selection: vscode.Selection,
