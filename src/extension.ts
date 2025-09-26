@@ -175,17 +175,6 @@ export function activate(context: vscode.ExtensionContext) {
 			isCompletedPropName(),
 		);
 	}
-
-	const currentTimeDisposable = vscode.commands.registerCommand(
-		"key-cooker.currentTime",
-		() => {
-			// Display the current time in a message box
-			const currentTime = new Date().toLocaleTimeString();
-			vscode.window.showInformationMessage(`Current Time: ${currentTime}`);
-		},
-	);
-
-	context.subscriptions.push(currentTimeDisposable);
 }
 
 // This method is called when your extension is deactivated
