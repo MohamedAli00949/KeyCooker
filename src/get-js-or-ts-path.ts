@@ -145,10 +145,10 @@ export function getKeyPathAtJSOrTS(
 
 	for (let i = startLine; i >= 0; i--) {
 		const line = lines[i];
-		const comemntLine = isJSComment(line);
+		const commentLine = isJSComment(line);
 
-		if (!line.trim() || comemntLine.check) {
-			if (i === startLine || comemntLine.type === "block") {
+		if (!line.trim() || commentLine.check) {
+			if (i === startLine || (commentLine.type === "block")) {
 				return { path: "", error: "Sorry, this is comment" };
 			}
 

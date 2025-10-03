@@ -7,11 +7,13 @@ export function isJSComment(line: string): {
 	const trimmedLine = line.trim();
 
 	return {
-		type: trimmedLine.startsWith("//")
-			? "inline"
-			: trimmedLine.startsWith("*") || trimmedLine.startsWith("/*")
-			? "block"
-			: "uncomment",
+		type:
+			(trimmedLine.startsWith("*") || trimmedLine.startsWith("/*")) &&
+			!trimmedLine.includes("*/")
+				? "block"
+				: trimmedLine.startsWith("//")
+				? "inline"
+				: "uncomment",
 		check:
 			trimmedLine.startsWith("//") ||
 			trimmedLine.startsWith("*") ||
@@ -36,7 +38,10 @@ export function findTupleIndex(
 	let braceCount = 0;
 
 	if (arrayLineIndex === startLineIndex) {
-		const line = cleanLine(lines[startLineIndex]).slice(arrayStart, selectionChar);
+		const line = cleanLine(lines[startLineIndex]).slice(
+			arrayStart,
+			selectionChar,
+		);
 		braceCount += [...line.matchAll(/\{/g)].length;
 		// braceCount -= [...line.matchAll(/\}/g)].length;
 
