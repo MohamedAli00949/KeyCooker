@@ -83,11 +83,11 @@ function isCompletedPropName(): boolean {
 			selectionLineText.text.slice(selection.end.character),
 		];
 
-		const validBefore = /^\s*$|{\s*$|['"]$/.test(prevChars);
+		const validBefore = /\s*$|{\s*$|['"]$/.test(prevChars);
 
 		const validAfter =
 			(docLang.startsWith("typescript") && /^\s*['"]?\s*:/.test(nextChars)) ||
-			/^\s*['"]?:/.test(nextChars);
+			/^\s*['"]?\s*:/.test(nextChars);
 
 		const validName = /^['"]|^(?!\d)/.test(selectionText);
 
