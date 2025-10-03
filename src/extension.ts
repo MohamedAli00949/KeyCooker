@@ -77,38 +77,16 @@ function isCompletedPropName(): boolean {
 		const docLang = editor.document.languageId;
 		const selectionText = editor.document.getText(selection);
 		const selectionLineText = editor.document.lineAt(selection.active.line);
-		const [prevChars, nextChars] = selectionLineText.text.split(selectionText);
-
-		// const validBefore =
-		// 	!prevChars.slice(-1).trim() ||
-		// 	prevChars.slice(-1).trim() === "{" ||
-		// 	prevChars.trim().endsWith(`'`) ||
-		// 	prevChars.trim().endsWith(`"`);
-
-		// const validAfter =
-		// 	(docLang.startsWith("typescript") &&
-		// 		(nextChars.trim().startsWith("?:") ||
-		// 			nextChars.trim().startsWith(`"?:`) ||
-		// 			nextChars.trim().startsWith(`'?:`))) ||
-		// 	nextChars.trim().startsWith(":") ||
-		// 	nextChars.trim().startsWith(`":`) ||
-		// 	nextChars.trim().startsWith(`':`);
-
-		// const validName =
-		// 	selectionText.startsWith("'") ||
-		// 	selectionText.startsWith('"') ||
-		// 	!/^\d/.test(selectionText);
-
-		// const validBefore = /(?:(?<=\s)|(?<={)|(?<=')|(?<="))/.test(prevChars);
-		// const validName = /^(?:['"].*|[^\d]\w*)/.test(selectionText);
-		// const validAfter = docLang.startsWith("typescript")
-		// 	? /(?=\s*(?:\?|['"]\??)\s*:)/.test(nextChars)
-		// 	: /(?=\\s*['"]?:)/.test(nextChars);
+		// const [prevChars, nextChars] = selectionLineText.text.split(selectionText);
+		const [prevChars, nextChars] = [
+			selectionLineText.text.slice(0, selection.start.character),
+			selectionLineText.text.slice(selection.end.character),
+		];
 
 		const validBefore = /^\s*$|{\s*$|['"]$/.test(prevChars);
 
 		const validAfter =
-			(docLang.startsWith("typescript") && /^\s*['"]?\?:/.test(nextChars)) ||
+			(docLang.startsWith("typescript") && /^\s*['"]?\s*:/.test(nextChars)) ||
 			/^\s*['"]?:/.test(nextChars);
 
 		const validName = /^['"]|^(?!\d)/.test(selectionText);
