@@ -1,32 +1,158 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
+import { getLocation as getLocationJSON } from "jsonc-parser";
+import { getKeyPathAtJSOrTS } from "./get-js-or-ts-path";
+import { getKeyPathAtYAML } from "./get-yaml-path";
+
+function getSelectedKeyPath(): { path: string; error: string } {
+	const editor = vscode.window.activeTextEditor;
+
+	if (editor) {
+		const selection = editor.selection;
+		const selectedText = editor.document.getText(selection);
+		const document = editor.document;
+
+		const diagnostics = vscode.languages.getDiagnostics(document.uri);
+
+		const errors = diagnostics.filter(
+			(diagnostic) => diagnostic.severity === vscode.DiagnosticSeverity.Error,
+		);
+
+		if (errors.length > 0) {
+			return {
+				path: "",
+				error:
+					"Sorry, this file has errors that will affect the final result. Please fix them first.",
+			};
+		}
+
+		const offset = document.offsetAt(selection.active);
+
+		if (document.languageId === "json") {
+			const location = getLocationJSON(document.getText(), offset);
+
+			if (location.path.length > 0) {
+				return { path: location.path.join("."), error: "" };
+			} else {
+				return { path: "", error: "" };
+			}
+		} else if (
+			document.languageId === "yaml" ||
+			document.languageId === "yml"
+		) {
+			return {
+				path: getKeyPathAtYAML(
+					document,
+					selection,
+					selectedText.trim().replace(/['"]/g, ""),
+				),
+				error: "",
+			};
+		} else {
+			const result = getKeyPathAtJSOrTS(
+				document.getText(),
+				selectedText.trim().replace(/['"]/g, ""),
+				selection,
+				selection.start.line,
+			);
+
+			return result;
+		}
+	}
+
+	return { path: "", error: "" };
+}
+
+function isCompletedPropName(): boolean {
+	const editor = vscode.window.activeTextEditor;
+
+	if (editor) {
+		const selection = editor.selection;
+
+		if (!selection) {
+			return false;
+		}
+
+		const docLang = editor.document.languageId;
+		const selectionText = editor.document.getText(selection);
+		const selectionLineText = editor.document.lineAt(selection.active.line);
+		// const [prevChars, nextChars] = selectionLineText.text.split(selectionText);
+		const [prevChars, nextChars] = [
+			selectionLineText.text.slice(0, selection.start.character),
+			selectionLineText.text.slice(selection.end.character),
+		];
+
+		const validBefore = /\s*$|{\s*$|['"]$/.test(prevChars);
+
+		const validAfter =
+			(docLang.startsWith("typescript") && /^\s*['"]?\s*:/.test(nextChars)) ||
+			/^\s*['"]?\s*:/.test(nextChars);
+
+		const validName = /^['"]|^(?!\d)/.test(selectionText);
+
+		return validBefore && validAfter && validName;
+	}
+
+	return false;
+}
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "key-cooker" is now active!');
-
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('key-cooker.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello VS Code!');
-	});
 
-	const currentTimeDisposable = vscode.commands.registerCommand('key-cooker.currentTime', () => {
-		// Display the current time in a message box
-		const currentTime = new Date().toLocaleTimeString();
-		vscode.window.showInformationMessage(`Current Time: ${currentTime}`);
-	});
+	const disposable = vscode.commands.registerCommand(
+		"key-cooker.copyKeyPath",
+		async () => {
+			const editor = vscode.window.activeTextEditor;
+			if (!editor) {
+				return;
+			}
+			const selection = editor.selection;
+			if (!selection) {
+				return;
+			}
 
+			if (isCompletedPropName()) {
+				const path = getSelectedKeyPath();
+				if (path.path && !path.error) {
+					try {
+						await vscode.env.clipboard.writeText(path.path);
+						vscode.window.showInformationMessage(
+							`The final path to '${editor.document.getText(selection)}': ` +
+								path.path,
+						);
+					} catch (error) {
+						vscode.window.showErrorMessage(
+							"Failed to copy content: " + (error as Error).message,
+						);
+					}
+				}
+
+				if (path.error) {
+					vscode.window.showErrorMessage(path.error);
+				}
+			} else {
+				vscode.window.showErrorMessage("Sorry, uncompleted selected prop");
+				return;
+			}
+		},
+	);
 	context.subscriptions.push(disposable);
-	context.subscriptions.push(currentTimeDisposable);
+
+	vscode.window.onDidChangeTextEditorSelection(() => updateContext());
+	vscode.workspace.onDidChangeTextDocument(() => updateContext());
+
+	function updateContext() {
+		vscode.commands.executeCommand(
+			"setContext",
+			"completedKey",
+			isCompletedPropName(),
+		);
+	}
 }
 
 // This method is called when your extension is deactivated
