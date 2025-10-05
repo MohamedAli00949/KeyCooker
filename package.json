@@ -2,10 +2,14 @@
   "name": "key-cooker",
   "displayName": "key cooker",
   "description": "This extension allows you to copy the path to a property in a JSON, YAML, JS/TS objects, and TS types.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "MohamedAli",
   "engines": {
     "vscode": "^1.104.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MohamedAli00949/KeyCooker"
   },
   "icon": "images/icon.png",
   "categories": [
