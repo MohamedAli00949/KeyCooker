@@ -696,7 +696,7 @@ suite("key-cooker.copyKeyPath Command Tests", () => {
 
 		// Select "bar"
 		await selectToken(editor, "bar");
-		console.log(editor.document.getText(editor.selection));
+		// console.log(editor.document.getText(editor.selection));
 
 		const clipboardText = await getClipboardAfterRun();
 		assert.strictEqual(clipboardText, "foo.bar");
@@ -719,7 +719,7 @@ suite("key-cooker.copyKeyPath Command Tests", () => {
 		);
 
 		await selectToken(editor, "baz");
-		console.log(editor.document.getText(editor.selection));
+		// console.log(editor.document.getText(editor.selection));
 
 		const clipboardText = await getClipboardAfterRun();
 		assert.strictEqual(clipboardText, "obj.foo.bar.baz");

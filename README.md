@@ -1,22 +1,47 @@
-# key-cooker README
+# Key Cooker
 
-This is the README for your extension "key-cooker". After writing up a brief description, we recommend including the following sections.
+Key Cooker is an extension designed to provide the best experience when working with key-value pairs of data (JSON, YAML, JS object, and TS types).
+
+## How to use
+
+Follow the next steps to gain the best experience:
+
+1. Open JSON, YAML, or, JS/TS file.
+2. Select key as above image.
+3. Click `Ctrl` + `Shift` + `C`
+  <br>
+  **Or**
+  <br>
+  Open context menu and click `Copy key path` option
+  <br>
+  **Or**
+  <br>
+  Open Command palette (using view menu or click `Ctrl` + `Shift` + `P`) and search about `Copy key path` and click it.
+4. Click `Ctrl` + `V` (based on your settings) to past the copied key.
+
+### How to copy selected key at JSON/YAML
+
+![how to copy selected key at JSON/YAML files](/images//Copy%20key%20path.gif)
+
+### How to copy selected key at JS Object or TS Type
+
+![How to copy selected key at TS and JS](/images/Copy%20selected%20key%20path%20at%20ts,js.gif)
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- Copy selected key path.
+  - Copy the key path at JSON file.
+  - Copy the key path at YAML file.
+  - Copy the key path at JS object.
+  - Copy the key path at TS type.
+- Copy key path on focus. (coming soon)
+- Preview the JSON, YAML, JS objects, and TS types. (coming soon)
 
-For example if there is an image subfolder under your extension project workspace:
+<!-- ## Requirements
 
-\!\[feature X\]\(images/feature-x.png\)
+If you have any requirements or dependencies, add a section describing those and how to install and configure them. -->
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
-
-## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
-
-## Extension Settings
+<!-- ## Extension Settings
 
 Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
 
@@ -25,47 +50,22 @@ For example:
 This extension contributes the following settings:
 
 * `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+* `myExtension.thing`: Set to `blah` to do something. -->
 
-## Known Issues
+<!-- ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+Calling out known issues can help limit users opening duplicate issues against your extension. -->
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
-
 ### 1.0.0
 
-Initial release of ...
+- Add copy selected key path.
 
-### 1.0.1
+## License
+Key Cooker is licensed under the MIT License. For full license details, please refer to the [LICENSE](./LICENSE) file included in this repository.
 
-Fixed issue #.
+## Contribution
+Key Cooker is an open-source project and welcomes contributions.
 
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+- Create a bug/feature [issue](https://github.com/MohamedAli00949/KeyCooker/issues).
