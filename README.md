@@ -21,7 +21,7 @@ Follow the next steps to gain the best experience:
 
 ### How to copy selected key at JSON/YAML
 
-![how to copy selected key at JSON/YAML files](/images//Copy%20key%20path.gif)
+![how to copy selected key at JSON/YAML files](/images/Copy%20selected%20key%20path.gif)
 
 ### How to copy selected key at JS Object or TS Type
 
