@@ -29,7 +29,7 @@ async function main() {
 			launchArgs: ["--disable-extensions"],
 		});
 	} catch {
-		console.error("Failed to run tests");
+		// console.error("Failed to run tests");
 		process.exit(1);
 	}
 }

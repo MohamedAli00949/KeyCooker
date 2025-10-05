@@ -174,7 +174,7 @@ export function getKeyPathAtJSOrTS(
 				(a, b) => b.index - a.index,
 			);
 			arrayMatches.forEach((arrayMatch, i) => {
-				console.log(`arrayMatch ${i}: `, arrayMatch);
+				// console.log(`arrayMatch ${i}: `, arrayMatch);
 				const tupleIndex = findTupleIndex(
 					lines,
 					startLine,
