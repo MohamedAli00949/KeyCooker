@@ -7,6 +7,10 @@
   "engines": {
     "vscode": "^1.104.3"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MohamedAli00949/KeyCooker"
+  },
   "icon": "images/icon.png",
   "categories": [
     "Other"
