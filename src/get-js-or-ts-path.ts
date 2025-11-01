@@ -6,7 +6,7 @@ import {
 } from "./utils";
 import * as vscode from "vscode";
 
-type BlockType = "object" | "class" | "type" | null;
+type BlockType = "object" | "class" | "type" | "function" | null;
 
 function getBlockData(
 	trimmedLine: string,
@@ -32,6 +32,7 @@ function getBlockData(
 	const constMatch = trimmedLine.match(
 		/(?:export\s+)?(?:const|let|var)\s+(\w+)(?:\s*:)?/,
 	);
+	// todo: fix this for the case of arrow functions
 	if (constMatch) {
 		if (/:\s*[{[]/.test(trimmedLine) && equalSeparatorLine === -1) {
 			return { typeName: "", blockType: "type" };
@@ -43,6 +44,11 @@ function getBlockData(
 	const classMatch = trimmedLine.match(/(?:export\s+)?class\s+(\w+)/);
 	if (classMatch) {
 		return { typeName: classMatch[1], blockType: "class" };
+	}
+
+	const functionMatch = trimmedLine.match(/(?:export\s+)?function\s+(\w+)/);
+	if (functionMatch) {
+		return { typeName: functionMatch[1], blockType: null };
 	}
 
 	// return { typeName, blockType };
@@ -148,7 +154,7 @@ export function getKeyPathAtJSOrTS(
 		const commentLine = isJSComment(line);
 
 		if (!line.trim() || commentLine.check) {
-			if (i === startLine || (commentLine.type === "block")) {
+			if (i === startLine || commentLine.type === "block") {
 				return { path: "", error: "Sorry, this is comment" };
 			}
 
@@ -251,6 +257,14 @@ export function getKeyPathAtJSOrTS(
 
 	if (blockType === "type" && !typeName) {
 		return { path: "", error: "Sorry, invalid key at inline type" };
+	}
+
+	if (blockType === null) {
+		return { path: "", error: "Sorry, invalid key at inline object/type." };
+	}
+
+	if (blockType === "function") {
+		return { path: "", error: "Sorry, invalid key at function." };
 	}
 
 	const result = buildFinalPath(path, blockType, typeName);
