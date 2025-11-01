@@ -29,11 +29,22 @@ function getSelectedKeyPath(): { path: string; error: string } {
 
 		const offset = document.offsetAt(selection.active);
 
-		if (document.languageId === "json") {
+		if (document.languageId === "json" || document.languageId === "jsonc") {
 			const location = getLocationJSON(document.getText(), offset);
 
 			if (location.path.length > 0) {
-				return { path: location.path.join("."), error: "" };
+				return {
+					path: location.path
+						.map((p, i) =>
+							p.toString().includes(".")
+								? `["${p}"]`
+								: i !== location.path.length - 1
+								? `${p}.`
+								: `${p}`,
+						)
+						.join(""),
+					error: "",
+				};
 			} else {
 				return { path: "", error: "" };
 			}
