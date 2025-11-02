@@ -691,6 +691,156 @@ suite("key-cooker.copyKeyPath Command Tests", () => {
 		}
 	});
 
+	test("should show function error when selecting param inside function block", async () => {
+		const editor = await openDocument(
+			"typescript",
+			`export function getKeyPathAtJSOrTS(
+				documentText: string,
+				selectedText: string,
+				startLine: number,
+			): { path: string; error: string } {
+				return { path: "", error: "" }
+			}`,
+		);
+		await selectToken(editor, "selectedText");
+
+		const showErrorStub = sinon.stub(vscode.window, "showErrorMessage");
+		try {
+			await vscode.commands.executeCommand(commandId);
+			await assert.ok(
+				showErrorStub.calledWith("Sorry, invalid key at function."),
+				"Should show comment error for selection inside block comment",
+			);
+		} finally {
+			showErrorStub.restore();
+		}
+	});
+
+	test("should show function error when selecting param inside function as const block", async () => {
+		const editor = await openDocument(
+			"typescript",
+			`  export const getKeyPathAtJSOrTS1 = function (
+				documentText: string,
+				selectedText: string,
+				startLine: number,
+			): { path: string; error: string } {
+				return { path: "", error: "" }
+			}`,
+		);
+		await selectToken(editor, "startLine");
+
+		const showErrorStub = sinon.stub(vscode.window, "showErrorMessage");
+		try {
+			await vscode.commands.executeCommand(commandId);
+			await assert.ok(
+				showErrorStub.calledWith("Sorry, invalid key at function."),
+				"Should show comment error for selection inside block comment",
+			);
+		} finally {
+			showErrorStub.restore();
+		}
+	});
+
+	test("should show function error when selecting return property inside function block", async () => {
+		const editor = await openDocument(
+			"typescript",
+			`  export const getKeyPathAtJSOrTS1 = function (
+				documentText: string,
+				selectedText: string,
+				startLine: number,
+			): { [key: string]: string } {
+				return { path: "", error: "" }
+			}`,
+		);
+		await selectToken(editor, "path");
+
+		const showErrorStub = sinon.stub(vscode.window, "showErrorMessage");
+		try {
+			await vscode.commands.executeCommand(commandId);
+			await assert.ok(
+				showErrorStub.calledWith("Sorry, invalid key at function."),
+				"Should show comment error for selection inside block comment",
+			);
+		} finally {
+			showErrorStub.restore();
+		}
+	});
+
+	test("should show function error when selecting return property type inside function block", async () => {
+		const editor = await openDocument(
+			"typescript",
+			`export const getKeyPathAtJSOrTS4 = ({ documentText = "string", selectedText = "string", startLine = 10 }: { documentText: string, selectedText: string, startLine: number }): { path: string; error: string } => {
+				return { path: "", error: "" }
+			};`,
+		);
+		await selectToken(editor, "path");
+
+		const showErrorStub = sinon.stub(vscode.window, "showErrorMessage");
+		try {
+			await vscode.commands.executeCommand(commandId);
+			await assert.ok(
+				showErrorStub.calledWith("Sorry, invalid key at function."),
+				"Should show comment error for selection inside block comment",
+			);
+		} finally {
+			showErrorStub.restore();
+		}
+	});
+
+	test("should show function error when selecting param inside arrow function block", async () => {
+		const editor = await openDocument(
+			"typescript",
+			`const getKeyPathAtJSOrTS2 = (
+				documentText: string,
+				selectedText: string,
+				startLine: number,
+			): { [key: string]: string } => {
+				return { path: "", error: "" }
+			};`,
+		);
+		await selectToken(editor, "error");
+
+		const showErrorStub = sinon.stub(vscode.window, "showErrorMessage");
+		try {
+			await vscode.commands.executeCommand(commandId);
+			await assert.ok(
+				showErrorStub.calledWith("Sorry, invalid key at function."),
+				"Should show comment error for selection inside block comment",
+			);
+		} finally {
+			showErrorStub.restore();
+		}
+	});
+
+	test("should show copy key path when selecting param at nested object inside arrow function block", async () => {
+		const editor = await openDocument(
+			"typescript",
+			`const getKeyPathAtJSOrTS2 = (
+				documentText: string,
+				selectedText: string,
+				startLine: number,
+			): { [key: string]: string } => {
+				const res = { path2: "", error: "" };
+
+				return { path: "", error: "" }
+			};`,
+		);
+		await selectToken(editor, "path2");
+
+		const showErrorStub = sinon.stub(vscode.window, "showErrorMessage");
+		try {
+			await vscode.commands.executeCommand(commandId);
+
+			const clipboardText = await vscode.env.clipboard.readText();
+			assert.strictEqual(
+				clipboardText,
+				"res.path2",
+			);
+		} finally {
+			showErrorStub.restore();
+		}
+	});
+
 	test("should copy JSON key path", async () => {
 		const editor = await openDocument("json", '{ "foo": { "bar": 42 } }');
 

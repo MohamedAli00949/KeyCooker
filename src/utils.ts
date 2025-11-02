@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as ts from "typescript";
 
 export function isJSComment(line: string): {
 	check: boolean;
@@ -85,4 +86,72 @@ export async function openDocument(language: string, content: string) {
 	const editor = await vscode.window.showTextDocument(doc);
 
 	return editor;
+}
+
+export function isInsideFunctionUsingAST(
+	source: string,
+	position: number,
+): boolean {
+	const sourceFile = ts.createSourceFile(
+		"temp.ts",
+		source,
+		ts.ScriptTarget.Latest,
+		true,
+	);
+
+	function find(node: ts.Node): boolean {
+		// Check if position is within this node's range
+		if (position < node.getFullStart() || position > node.getEnd()) {
+			return false;
+		}
+
+		// Check if we're inside a function-like node
+		if (ts.isFunctionLike(node)) {
+			const func = node as ts.FunctionLikeDeclaration;
+
+			// Check if position is in parameters
+			if (func.parameters) {
+				for (const param of func.parameters) {
+					if (position >= param.getStart() && position <= param.getEnd()) {
+						return true;
+					}
+				}
+			}
+
+			// Check if position is in return type annotation
+			if (
+				func.type &&
+				position >= func.type.getStart() &&
+				position <= func.type.getEnd()
+			) {
+				return true;
+			}
+
+			// Check if position is in a return statement's object literal
+			if (func.body && ts.isBlock(func.body)) {
+				for (const statement of func.body.statements) {
+					if (ts.isReturnStatement(statement) && statement.expression) {
+						if (
+							position >= statement.expression.getStart() &&
+							position <= statement.expression.getEnd()
+						) {
+							// Make sure it's an object literal, not a variable reference
+							if (ts.isObjectLiteralExpression(statement.expression)) {
+								return true;
+							}
+						}
+					}
+				}
+			}
+
+			// If we're in a function but not in params, return type, or return object,
+			// continue searching deeper (for nested functions)
+			return ts.forEachChild(node, find) || false;
+		}
+
+		// Continue searching in children
+		return ts.forEachChild(node, find) || false;
+	}
+
+	return find(sourceFile);
 }

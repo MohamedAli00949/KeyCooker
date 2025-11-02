@@ -4,6 +4,7 @@ import * as vscode from "vscode";
 import { getLocation as getLocationJSON } from "jsonc-parser";
 import { getKeyPathAtJSOrTS } from "./get-js-or-ts-path";
 import { getKeyPathAtYAML } from "./get-yaml-path";
+import { isInsideFunctionUsingAST } from "./utils";
 
 function getSelectedKeyPath(): { path: string; error: string } {
 	const editor = vscode.window.activeTextEditor;
@@ -29,11 +30,22 @@ function getSelectedKeyPath(): { path: string; error: string } {
 
 		const offset = document.offsetAt(selection.active);
 
-		if (document.languageId === "json") {
+		if (document.languageId === "json" || document.languageId === "jsonc") {
 			const location = getLocationJSON(document.getText(), offset);
 
 			if (location.path.length > 0) {
-				return { path: location.path.join("."), error: "" };
+				return {
+					path: location.path
+						.map((p, i) =>
+							p.toString().includes(".")
+								? `["${p}"]`
+								: i !== location.path.length - 1
+								? `${p}.`
+								: `${p}`,
+						)
+						.join(""),
+					error: "",
+				};
 			} else {
 				return { path: "", error: "" };
 			}
@@ -50,14 +62,23 @@ function getSelectedKeyPath(): { path: string; error: string } {
 				error: "",
 			};
 		} else {
-			const result = getKeyPathAtJSOrTS(
+			const insideFunction = isInsideFunctionUsingAST(
 				document.getText(),
-				selectedText.trim().replace(/['"]/g, ""),
-				selection,
-				selection.start.line,
+				offset,
 			);
 
-			return result;
+			if (insideFunction) {
+				return { path: "", error: "Sorry, invalid key at function." };
+			} else {
+				const result = getKeyPathAtJSOrTS(
+					document.getText(),
+					selectedText.trim().replace(/['"]/g, ""),
+					selection,
+					selection.start.line,
+				);
+
+				return result;
+			}
 		}
 	}
 
