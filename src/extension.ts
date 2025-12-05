@@ -6,12 +6,115 @@ import { getKeyPathAtJSOrTS } from "./get-js-or-ts-path";
 import { getKeyPathAtYAML } from "./get-yaml-path";
 import { isInsideFunctionUsingAST } from "./utils";
 
+// Pre-compiled regex patterns
+const VALID_BEFORE_REGEX = /^\s*$|{\s*$|['"]$/;
+const VALID_AFTER_TS_REGEX = /^\s*['"]?\?:/;
+const VALID_AFTER_REGEX = /^\s*['"]?:/;
+
+// Character code constants
+const CHAR = {
+	SPACE: 32,
+	TAB: 9,
+	NEWLINE: 10,
+	CR: 13,
+	OPEN_BRACE: 123,
+	COMMA: 44,
+	COLON: 58,
+	QUOTE_SINGLE: 39,
+	QUOTE_DOUBLE: 34,
+	QUESTION: 63,
+	DIGIT_0: 48,
+	DIGIT_9: 57,
+};
+
+function isWhitespace(code: number) {
+	return (
+		code === CHAR.SPACE ||
+		code === CHAR.TAB ||
+		code === CHAR.NEWLINE ||
+		code === CHAR.CR
+	);
+}
+
+function isDigit(code: number) {
+	return code >= CHAR.DIGIT_0 && code <= CHAR.DIGIT_9;
+}
+
+function detectPropKeyAtCursor(
+	line: string,
+	offset: number,
+	docLang = "javascript",
+) {
+	if (offset < 0 || offset > line.length) {
+		return null;
+	}
+
+	// Find key boundaries
+	let start = offset;
+	let end = offset;
+
+	// Scan backwards
+	while (start > 0) {
+		const code = line.charCodeAt(start - 1);
+		if (isWhitespace(code) || code === CHAR.OPEN_BRACE || code === CHAR.COMMA) {
+			break;
+		}
+		start--;
+	}
+
+	// Scan forwards
+	while (end < line.length) {
+		const code = line.charCodeAt(end);
+		if (isWhitespace(code) || code === CHAR.COLON || code === CHAR.QUESTION) {
+			break;
+		}
+		end++;
+	}
+
+	if (start >= end) {
+		return null;
+	}
+
+	const key = line.substring(start, end);
+
+	// Quick validation
+	const firstCode = key.charCodeAt(0);
+	if (
+		!(firstCode === CHAR.QUOTE_SINGLE || firstCode === CHAR.QUOTE_DOUBLE) &&
+		isDigit(firstCode)
+	) {
+		return null;
+	}
+
+	// Context validation
+	const prevChars = line.substring(0, start);
+	const nextChars = line.substring(end);
+
+	const validBefore = VALID_BEFORE_REGEX.test(prevChars);
+	const validAfter =
+		(docLang.startsWith("typescript") &&
+			VALID_AFTER_TS_REGEX.test(nextChars)) ||
+		VALID_AFTER_REGEX.test(nextChars);
+
+	if (!validBefore || !validAfter) {
+		return null;
+	}
+
+	return {
+		key,
+		start,
+		end,
+		startColumn: start + 1,
+		endColumn: end + 1,
+	};
+}
+
 function getSelectedKeyPath(): { path: string; error: string } {
 	const editor = vscode.window.activeTextEditor;
 
 	if (editor) {
 		const selection = editor.selection;
-		const selectedText = editor.document.getText(selection);
+		// const selectedText = editor.document.getText(selection);
 		const document = editor.document;
 
 		const diagnostics = vscode.languages.getDiagnostics(document.uri);
@@ -29,6 +132,10 @@ function getSelectedKeyPath(): { path: string; error: string } {
 		}
 
 		const offset = document.offsetAt(selection.active);
+
+		const keyProps = isCompletedPropName();
+
+		console.log("getSelectedKeyPath keyProps: ", keyProps);
 
 		if (document.languageId === "json" || document.languageId === "jsonc") {
 			const location = getLocationJSON(document.getText(), offset);
@@ -56,8 +163,11 @@ function getSelectedKeyPath(): { path: string; error: string } {
 			return {
 				path: getKeyPathAtYAML(
 					document,
-					selection,
-					selectedText.trim().replace(/['"]/g, ""),
+					{
+						start: keyProps?.start as { line: number; character: number },
+						end: keyProps?.end as { line: number; character: number },
+					},
+					keyProps?.key as string,
 				),
 				error: "",
 			};
@@ -72,8 +182,11 @@ function getSelectedKeyPath(): { path: string; error: string } {
 			} else {
 				const result = getKeyPathAtJSOrTS(
 					document.getText(),
-					selectedText.trim().replace(/['"]/g, ""),
-					selection,
+					keyProps?.key as string,
+					{
+						start: keyProps?.start as { line: number; character: number },
+						end: keyProps?.end as { line: number; character: number },
+					},
 					selection.start.line,
 				);
 
@@ -85,37 +198,87 @@ function getSelectedKeyPath(): { path: string; error: string } {
 	return { path: "", error: "" };
 }
 
-function isCompletedPropName(): boolean {
+function isCompletedPropName(): {
+	key: string;
+	isCompleted: boolean;
+	start: {
+		line: number;
+		character: number;
+	};
+	end: {
+		line: number;
+		character: number;
+	};
+} | null {
 	const editor = vscode.window.activeTextEditor;
 
 	if (editor) {
 		const selection = editor.selection;
 
-		if (!selection) {
-			return false;
-		}
+		// if (!selection) {
+		// 	return false;
+		// }
 
 		const docLang = editor.document.languageId;
 		const selectionText = editor.document.getText(selection);
 		const selectionLineText = editor.document.lineAt(selection.active.line);
-		// const [prevChars, nextChars] = selectionLineText.text.split(selectionText);
-		const [prevChars, nextChars] = [
-			selectionLineText.text.slice(0, selection.start.character),
-			selectionLineText.text.slice(selection.end.character),
-		];
 
-		const validBefore = /\s*$|{\s*$|['"]$/.test(prevChars);
+		if (!selection.isEmpty) {
+			// const [prevChars, nextChars] = selectionLineText.text.split(selectionText);
+			const [prevChars, nextChars] = [
+				selectionLineText.text.slice(0, selection.start.character),
+				selectionLineText.text.slice(selection.end.character),
+			];
 
-		const validAfter =
-			(docLang.startsWith("typescript") && /^\s*['"]?\s*:/.test(nextChars)) ||
-			/^\s*['"]?\s*:/.test(nextChars);
+			const validBefore = /\s*$|{\s*$|['"]$/.test(prevChars);
 
-		const validName = /^['"]|^(?!\d)/.test(selectionText);
+			const validAfter =
+				(docLang.startsWith("typescript") && /^\s*['"]?\s*:/.test(nextChars)) ||
+				/^\s*['"]?\s*:/.test(nextChars);
 
-		return validBefore && validAfter && validName;
+			const validName = /^['"]|^(?!\d)/.test(selectionText);
+
+			if (validAfter && validBefore && validName) {
+				return {
+					key: selectionText,
+					isCompleted: true,
+					start: {
+						line: selection.start.line,
+						character: selection.start.character,
+					},
+					end: {
+						line: selection.end.line,
+						character: selection.end.character,
+					},
+				};
+			}
+		}
+
+		const detectedKeyProps = detectPropKeyAtCursor(
+			selectionLineText.text,
+			selection.start.character,
+			docLang,
+		);
+
+		if (detectedKeyProps !== null && detectedKeyProps.key.length > 0) {
+			return {
+				key: detectedKeyProps.key,
+				isCompleted: true,
+				start: {
+					line: selection.start.line,
+					character: detectedKeyProps.start,
+				},
+				end: {
+					line: selection.start.line,
+					character: detectedKeyProps.end,
+				},
+			};
+		}
+
+		// console.log("isCompletedPropName keyProps: ", keyProps);
 	}
 
-	return false;
+	return null;
 }
 
 // This method is called when your extension is activated
@@ -125,6 +288,8 @@ export function activate(context: vscode.ExtensionContext) {
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
 
+	console.log("key-cooker is active");
+
 	const disposable = vscode.commands.registerCommand(
 		"key-cooker.copyKeyPath",
 		async () => {
@@ -132,19 +297,25 @@ export function activate(context: vscode.ExtensionContext) {
 			if (!editor) {
 				return;
 			}
-			const selection = editor.selection;
-			if (!selection) {
-				return;
-			}
 
-			if (isCompletedPropName()) {
+			const selection = editor.selection;
+			// if (!selection) {
+			// 	return;
+			// }
+
+			const detectedKeyProps = isCompletedPropName();
+			console.log("global keyProps: ", detectedKeyProps);
+
+			if (detectedKeyProps === null) {
+				vscode.window.showErrorMessage("Sorry, uncompleted selected prop");
+				return;
+			} else {
 				const path = getSelectedKeyPath();
 				if (path.path && !path.error) {
 					try {
 						await vscode.env.clipboard.writeText(path.path);
 						vscode.window.showInformationMessage(
-							`The final path to '${editor.document.getText(selection)}': ` +
-								path.path,
+							`The final path to '${detectedKeyProps.key}': ` + path.path,
 						);
 					} catch (error) {
 						vscode.window.showErrorMessage(
@@ -152,13 +323,10 @@ export function activate(context: vscode.ExtensionContext) {
 						);
 					}
 				}
-
+	
 				if (path.error) {
 					vscode.window.showErrorMessage(path.error);
 				}
-			} else {
-				vscode.window.showErrorMessage("Sorry, uncompleted selected prop");
-				return;
 			}
 		},
 	);
