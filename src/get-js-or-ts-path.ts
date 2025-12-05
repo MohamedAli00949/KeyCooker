@@ -60,6 +60,10 @@ function buildFinalPath(
 	blockType: BlockType,
 	typeName: string,
 ) {
+	console.log("pathChunks: ", pathChunks);
+	console.log("blockType: ", blockType);
+	console.log("typeName: ", typeName);
+
 	if (blockType === "object" || blockType === "class") {
 		let result = "";
 		pathChunks
@@ -130,7 +134,16 @@ interface PathSegment {
 export function getKeyPathAtJSOrTS(
 	documentText: string,
 	selectedText: string,
-	selection: vscode.Selection,
+	selection: {
+		start: {
+			line: number;
+			character: number;
+		};
+		end: {
+			line: number;
+			character: number;
+		};
+	},
 	startLine: number,
 ): { path: string; error: string } {
 	const lines = documentText.split("\n");
@@ -248,6 +261,8 @@ export function getKeyPathAtJSOrTS(
 		}
 
 		const blockData = getBlockData(targetLineSlice.trim(), equalSeparatorLine);
+		console.log("blockData: ", blockData);
+
 		if (blockData) {
 			blockType = blockData.blockType;
 			typeName = blockData.typeName;

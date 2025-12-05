@@ -832,10 +832,7 @@ suite("key-cooker.copyKeyPath Command Tests", () => {
 			await vscode.commands.executeCommand(commandId);
 
 			const clipboardText = await vscode.env.clipboard.readText();
-			assert.strictEqual(
-				clipboardText,
-				"res.path2",
-			);
+			assert.strictEqual(clipboardText, "res.path2");
 		} finally {
 			showErrorStub.restore();
 		}
@@ -906,4 +903,47 @@ suite("key-cooker.copyKeyPath Command Tests", () => {
 		const clipboardText = await getClipboardAfterRun();
 		assert.strictEqual(clipboardText, "obj.foo.bar");
 	});
+
+	// NEW: focus-only (collapsed selection / caret) tests
+    test("should copy JSON key path when caret is on property (no selection)", async () => {
+        const editor = await openDocument("json", '{ "foo": { "bar": 42 } }');
+
+        // place caret inside "bar" without selecting text
+        const idx = editor.document.getText().indexOf("bar");
+        const pos = editor.document.positionAt(idx + 1);
+        editor.selection = new vscode.Selection(pos, pos);
+
+        const clipboardText = await getClipboardAfterRun();
+        assert.strictEqual(clipboardText, "foo.bar");
+    });
+
+    test("should copy JS key path when caret is on property (no selection)", async () => {
+        const editor = await openDocument(
+            "javascript",
+            "const obj = { foo: { bar: 123 } };",
+        );
+
+        // place caret inside "foo" without selecting text
+        const idx = editor.document.getText().indexOf("foo");
+        const pos = editor.document.positionAt(idx + 1);
+        editor.selection = new vscode.Selection(pos, pos);
+
+        const clipboardText = await getClipboardAfterRun();
+        assert.strictEqual(clipboardText, "obj.foo");
+    });
+
+    test("should copy nested key path in TypeScript when caret is on property (no selection)", async () => {
+        const editor = await openDocument(
+            "typescript",
+            "const obj = { foo: { bar: { baz: 1 } } };",
+        );
+
+        // place caret inside "baz" without selecting text
+        const idx = editor.document.getText().indexOf("baz");
+        const pos = editor.document.positionAt(idx + 1);
+        editor.selection = new vscode.Selection(pos, pos);
+
+        const clipboardText = await getClipboardAfterRun();
+        assert.strictEqual(clipboardText, "obj.foo.bar.baz");
+    });
 });

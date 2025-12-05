@@ -4,7 +4,16 @@ import * as vscode from "vscode";
 // todo: fix if prop at inline object such as (ex, `    engines: {node: '>= 0.4'}` at package-lock.json file)
 export function getKeyPathAtYAML(
 	document: vscode.TextDocument,
-	selection: vscode.Selection,
+	selection: {
+		start: {
+			line: number;
+			character: number;
+		};
+		end: {
+			line: number;
+			character: number;
+		};
+	},
 	selectedText: string,
 ): string {
 	const text = document.getText().replace(/\r\n?/g, "\n");
